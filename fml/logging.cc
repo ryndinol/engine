@@ -102,6 +102,7 @@ int GetVlogVerbosity() {
 }
 
 bool ShouldCreateLogMessage(LogSeverity severity) {
+  return true;
   return severity >= GetMinLogLevel();
 }
 

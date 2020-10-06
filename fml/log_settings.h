@@ -22,7 +22,8 @@ struct LogSettings {
   // Log messages for FML_VLOG(x) (from flutter/fml/logging.h) are logged
   // at level -x, so setting the min log level to negative values enables
   // verbose logging.
-  LogSeverity min_log_level = LOG_INFO;
+  //LogSeverity min_log_level = LOG_INFO;
+  LogSeverity min_log_level = -1;
 };
 
 // Gets the active log settings for the current process.
