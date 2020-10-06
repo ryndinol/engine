@@ -439,6 +439,7 @@ static void SetHoverCallbacksEnabled(GLFWwindow* window, bool enabled) {
 }
 
 static void GLFWAssignMouseEventCallbacks(GLFWwindow* window) {
+  glfwPollEvents();
   glfwSetMouseButtonCallback(window, GLFWMouseButtonCallback);
   glfwSetScrollCallback(window, GLFWScrollCallback);
   if (GetWindowController(window)->window_wrapper->hover_tracking_enabled) {
@@ -765,7 +766,6 @@ void FlutterDesktopTerminate() {
   glfwTerminate();
 }
 
-
 /*
 // A message received from Flutter.
 typedef struct {
@@ -902,6 +902,11 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
   messenger->engine->message_dispatcher->SetMessageCallback("cap", HandlePointerCapture, nullptr /* user data */);
 
   return state.release();
+}
+FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
+    const FlutterDesktopWindowProperties& window_properties,
+    const FlutterDesktopEngineProperties& engine_properties) {
+  return FlutterDesktopCreateWindowWithFbo(window_properties, engine_properties, NULL, NULL);
 }
 
 void FlutterDesktopDestroyWindow(FlutterDesktopWindowControllerRef controller) {
