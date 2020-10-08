@@ -757,6 +757,34 @@ void FlutterDesktopTerminate() {
   glfwTerminate();
 }
 
+
+/*
+// A message received from Flutter.
+typedef struct {
+  // Size of this struct as created by Flutter.
+  size_t struct_size;
+  // The name of the channel used for this message.
+  const char* channel;
+  // The raw message data.
+  const uint8_t* message;
+  // The length of |message|.
+  size_t message_size;
+  // The response handle. If non-null, the receiver of this message must call
+  // FlutterDesktopSendMessageResponse exactly once with this handle.
+  const FlutterDesktopMessageResponseHandle* response_handle;
+} FlutterDesktopMessage;
+*/
+void HandleMessageCallback(FlutterDesktopMessengerRef messenger, const FlutterDesktopMessage* message, void* user_data){
+  if (std::strcmp(message->channel, "my_game") == 0) {
+    std::cout << "Flutter message from " << message->channel <<" [" << message->message_size<<"]: "<<message->message << std::endl;
+  } else {
+    std::cout << "Flutter message from " << message->channel <<" [" << message->message_size<<"] unknown format"<< std::endl;
+  }
+}
+void HandlePointerCapture(FlutterDesktopMessengerRef messenger, const FlutterDesktopMessage* message, void* user_data){
+  std::cout << "Flutter message from " << message->channel <<" [" << message->message_size<<"]: "<< (message->message[0] == 0 ? "False" : "True") << std::endl;
+}
+
 FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
     const FlutterDesktopWindowProperties& window_properties,
     const FlutterDesktopEngineProperties& engine_properties, GLFWwindow* _window, uint32_t (*create_fbo)(void*)) {
@@ -842,6 +870,11 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
   glfwSetFramebufferSizeCallback(window, GLFWFramebufferSizeCallback);
   glfwSetWindowRefreshCallback(window, GLFWWindowRefreshCallback);
   GLFWAssignEventCallbacks(window);
+
+  auto plugin = state->engine.get()->plugin_registrar.get();
+  auto messenger = plugin->engine->messenger.get();
+  messenger->engine->message_dispatcher->SetMessageCallback("my_game", HandleMessageCallback, nullptr /* user data */);
+  messenger->engine->message_dispatcher->SetMessageCallback("cap", HandlePointerCapture, nullptr /* user data */);
 
   return state.release();
 }
