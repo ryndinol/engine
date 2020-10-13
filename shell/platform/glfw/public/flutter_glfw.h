@@ -58,6 +58,7 @@ typedef struct {
   size_t switches_count;
 } FlutterDesktopEngineProperties;
 
+typedef struct GLFWwindow* GLFWwindowRef;
 // Properties for configuring the initial settings of a Flutter window.
 typedef struct {
   // The display title.
@@ -69,6 +70,11 @@ typedef struct {
   // Whether or not the user is prevented from resizing the window.
   // Reversed so that the default for a cleared struct is to allow resizing.
   bool prevent_resize;
+
+  GLFWwindowRef window;
+  uint32_t (*create_fbo)(void*);
+  void (*focus_mouse)(void*, bool);
+  void (*focus_keyboard)(void*, bool);
 } FlutterDesktopWindowProperties;
 
 // Sets up the library's graphic context. Must be called before any other
@@ -96,12 +102,6 @@ FLUTTER_EXPORT void FlutterDesktopTerminate();
 FLUTTER_EXPORT FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
     const FlutterDesktopWindowProperties& window_properties,
     const FlutterDesktopEngineProperties& engine_properties);
-typedef struct GLFWwindow* GLFWwindowRef;
-FLUTTER_EXPORT FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
-    const FlutterDesktopWindowProperties& window_properties,
-    const FlutterDesktopEngineProperties& engine_properties,
-    GLFWwindowRef window,
-    uint32_t (*create_fbo)(void*));
 
 // Shuts down the engine instance associated with |controller|, and cleans up
 // associated state.

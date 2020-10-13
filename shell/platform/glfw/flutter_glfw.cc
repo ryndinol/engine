@@ -69,6 +69,9 @@ struct FlutterDesktopWindowControllerState {
   // The screen coordinates per inch on the primary monitor. Defaults to a sane
   // value based on pixel_ratio 1.0.
   double monitor_screen_coordinates_per_inch = kDpPerInch;
+
+  void (*focus_mouse)(void*, bool);
+  void (*focus_keyboard)(void*, bool);
 };
 
 // Opaque reference for the GLFW window itself. This is separate from the
@@ -435,17 +438,22 @@ static void SetHoverCallbacksEnabled(GLFWwindow* window, bool enabled) {
                            enabled ? GLFWCursorPositionCallback : nullptr);
 }
 
-// Flushes event queue and then assigns default window callbacks.
-static void GLFWAssignEventCallbacks(GLFWwindow* window) {
-  glfwPollEvents();
-
-  glfwSetKeyCallback(window, GLFWKeyCallback);
-  glfwSetCharCallback(window, GLFWCharCallback);
+static void GLFWAssignMouseEventCallbacks(GLFWwindow* window) {
   glfwSetMouseButtonCallback(window, GLFWMouseButtonCallback);
   glfwSetScrollCallback(window, GLFWScrollCallback);
   if (GetWindowController(window)->window_wrapper->hover_tracking_enabled) {
     SetHoverCallbacksEnabled(window, true);
   }
+}
+static void GLFWAssignKeyboardEventCallbacks(GLFWwindow* window) {
+  glfwSetKeyCallback(window, GLFWKeyCallback);
+  glfwSetCharCallback(window, GLFWCharCallback);
+}
+// Flushes event queue and then assigns default window callbacks.
+static void GLFWAssignEventCallbacks(GLFWwindow* window) {
+  glfwPollEvents();
+  GLFWAssignKeyboardEventCallbacks(window);
+  GLFWAssignMouseEventCallbacks(window);
 }
 
 // Clears default window events.
@@ -783,13 +791,28 @@ void HandleMessageCallback(FlutterDesktopMessengerRef messenger, const FlutterDe
 }
 void HandlePointerCapture(FlutterDesktopMessengerRef messenger, const FlutterDesktopMessage* message, void* user_data){
   std::cout << "Flutter message from " << message->channel <<" [" << message->message_size<<"]: "<< (message->message[0] == 0 ? "False" : "True") << std::endl;
+  auto state = messenger->engine->window_controller;
+  auto window = state->parent_window.get();
+  bool flutter_has_focus = (bool)message->message[0];
+  state->focus_mouse(window, !flutter_has_focus);
+  if (flutter_has_focus) {
+    GLFWAssignMouseEventCallbacks(window);
+  }
 }
 
-FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
+void focusDummy(void* window, bool focus){}
+
+FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
     const FlutterDesktopWindowProperties& window_properties,
-    const FlutterDesktopEngineProperties& engine_properties, GLFWwindow* _window, uint32_t (*create_fbo)(void*)) {
+    const FlutterDesktopEngineProperties& engine_properties
+) {
+  auto window = (GLFWwindow*)window_properties.window;
+  auto create_fbo = window_properties.create_fbo;
+  auto focus_mouse = window_properties.focus_mouse == nullptr ? focusDummy : window_properties.focus_mouse;
+  auto focus_keyboard = window_properties.focus_mouse == nullptr ? focusDummy : window_properties.focus_keyboard;
+  
   auto state = std::make_unique<FlutterDesktopWindowControllerState>();
-  glfwMakeContextCurrent((GLFWwindow*)_window);
+  glfwMakeContextCurrent(window);
 
   // Create the window, and set the state as its user data.
   if (window_properties.prevent_resize) {
@@ -803,11 +826,13 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
   glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
   state->window = UniqueGLFWwindowPtr(
       glfwCreateWindow(window_properties.width, window_properties.height,
-                       window_properties.title, NULL, (GLFWwindow*)_window),
+                       window_properties.title, NULL, window),
       glfwDestroyWindow);
-  state->parent_window = UniqueGLFWwindowPtr((GLFWwindow*)_window, glfwDestroyWindow);
+  state->parent_window = UniqueGLFWwindowPtr(window, glfwDestroyWindow);
+  state->focus_mouse = focus_mouse;
+  state->focus_keyboard = focus_keyboard;
   glfwDefaultWindowHints();
-  GLFWwindow* window = state->window.get();
+  window = state->window.get();
   if (window == nullptr) {
     return nullptr;
   }
@@ -860,7 +885,7 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
   int width_px, height_px;
 
   // Use parent window for this.
-  window = (GLFWwindow*)_window;
+  window = state->parent_window.get();
 
   glfwSetWindowUserPointer(window, state.get());
   glfwGetFramebufferSize(window, &width_px, &height_px);
@@ -877,11 +902,6 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
   messenger->engine->message_dispatcher->SetMessageCallback("cap", HandlePointerCapture, nullptr /* user data */);
 
   return state.release();
-}
-FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
-    const FlutterDesktopWindowProperties& window_properties,
-    const FlutterDesktopEngineProperties& engine_properties) {
-  return FlutterDesktopCreateWindowWithFbo(window_properties, engine_properties, NULL, NULL);
 }
 
 void FlutterDesktopDestroyWindow(FlutterDesktopWindowControllerRef controller) {
