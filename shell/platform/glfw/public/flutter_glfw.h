@@ -102,12 +102,6 @@ FLUTTER_EXPORT void FlutterDesktopTerminate();
 FLUTTER_EXPORT FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
     const FlutterDesktopWindowProperties& window_properties,
     const FlutterDesktopEngineProperties& engine_properties);
-typedef struct GLFWwindow* GLFWwindowRef;
-FLUTTER_EXPORT FlutterDesktopWindowControllerRef FlutterDesktopCreateWindowWithFbo(
-    const FlutterDesktopWindowProperties& window_properties,
-    const FlutterDesktopEngineProperties& engine_properties,
-    GLFWwindowRef window,
-    uint32_t (*create_fbo)(void*));
 
 // Shuts down the engine instance associated with |controller|, and cleans up
 // associated state.

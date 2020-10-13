@@ -903,11 +903,6 @@ FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
 
   return state.release();
 }
-FlutterDesktopWindowControllerRef FlutterDesktopCreateWindow(
-    const FlutterDesktopWindowProperties& window_properties,
-    const FlutterDesktopEngineProperties& engine_properties) {
-  return FlutterDesktopCreateWindowWithFbo(window_properties, engine_properties, NULL, NULL);
-}
 
 void FlutterDesktopDestroyWindow(FlutterDesktopWindowControllerRef controller) {
   FlutterDesktopPluginRegistrarRef registrar =
